@@ -87,9 +87,9 @@ class AHFrame(wx.Frame):
         self.slideAddressStr = wx.StaticText(self.panel, -1, u'请输入 Slide Address:')
         self.vbox.Add(self.slideAddressStr, 0, wx.ALL, 5)
 
-        self.slideAddress = wx.TextCtrl(self.panel, -1)
+        self.slideAddressText = wx.TextCtrl(self.panel, -1)
         hbox3 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox3.Add(self.slideAddress, 1, wx.EXPAND)
+        hbox3.Add(self.slideAddressText, 1, wx.EXPAND)
         self.vbox.Add(hbox3, 0, wx.EXPAND | wx.ALL, 5)
 
         self.fileBtn = wx.Button(self.panel, -1, u'分析')
@@ -120,6 +120,7 @@ class AHFrame(wx.Frame):
         self.selectedArchiveFilePath = self.filesList[event.GetSelection()]
         self.getFilePath(self.selectedArchiveFilePath)
         self.getArchiveUUID()
+        self.getArchSlideAddress()
 
     #获取文件UUID
     def getArchiveUUID(self):
@@ -142,16 +143,42 @@ class AHFrame(wx.Frame):
         self.UUIDStringText.SetValue(self.archiveUUIDDic[self.archiveType.GetStringSelection()])
         self.selectedArchiveType = self.archiveType.GetStringSelection()
 
+    # 自动获取对应 arch 的 main Excutable Bundle's slide Address
+    def getArchSlideAddress(self):
+        comString = 'otool -arch ' +  self.selectedArchiveType + ' -l "' + self.getExecutableBundlePath() + '" | grep -B 3 -A 8 -m 2 "__TEXT" | grep vmaddr'
+        lines = os.popen(comString).readlines()
+        if len(lines) == 1:
+            line = lines[0]
+            line = line.strip()
+            slide_address = line.split(' ')[1]
+            self.slideAddressText.SetValue(slide_address)
+            self.archSlideAddress = slide_address
+        else:
+            # nothing
+            self.slideAddressText.SetValue('')
+            self.archSlideAddress = ''
+
+    def getExecutableBundlePath(self):
+       comString = 'cat "' + self.selectedArchiveFilePath + '/Info.plist" | grep \<string\>Applications\/'
+       lines = os.popen(comString).readlines()
+       if len(lines) == 1:
+            line = lines[0]
+            appName = line.replace('<string>Applications/', '').replace('.app</string>', '')
+            appName = appName.strip()
+            return self.selectedArchiveFilePath + '/Products/Applications/' + appName + '.app/' + appName
+       else:
+            return ''
 
     #选择编译器事件
     def EvtRadioBox(self, event):
         self.selectedArchiveType = event.GetString()
         self.UUIDStringText.SetValue(self.archiveUUIDDic[self.selectedArchiveType])
-
+        self.getArchSlideAddress()
+        # self.slideAddressText.SetValue(self.archSlideAddress)
 
     def startCalc(self, event):
         if self.memAddress.GetValue():
-            comString = 'xcrun atos -arch ' + self.selectedArchiveType + ' -o "' + str(self.appFilePath) + '" -l ' + self.slideAddress.GetValue() + ' ' + self.memAddress.GetValue()
+            comString = 'xcrun atos -arch ' + self.selectedArchiveType + ' -o "' + str(self.appFilePath) + '" -l ' + self.slideAddressText.GetValue() + ' ' + self.memAddress.GetValue()
             tmp = os.popen(comString).readlines()
             self.maybeReasonContent.SetValue(tmp[0])
 

@@ -84,6 +84,14 @@ class AHFrame(wx.Frame):
         hbox3.Add(self.memAddress, 1, wx.EXPAND)
         self.vbox.Add(hbox3, 0, wx.EXPAND | wx.ALL, 5)
 
+        self.slideAddressStr = wx.StaticText(self.panel, -1, u'请输入 Slide Address:')
+        self.vbox.Add(self.slideAddressStr, 0, wx.ALL, 5)
+
+        self.slideAddressText = wx.TextCtrl(self.panel, -1)
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox3.Add(self.slideAddressText, 1, wx.EXPAND)
+        self.vbox.Add(hbox3, 0, wx.EXPAND | wx.ALL, 5)
+
         self.fileBtn = wx.Button(self.panel, -1, u'分析')
         self.fileBtn.Bind(wx.EVT_BUTTON, self.startCalc)
         hbox4 = wx.BoxSizer(wx.HORIZONTAL)
@@ -112,10 +120,11 @@ class AHFrame(wx.Frame):
         self.selectedArchiveFilePath = self.filesList[event.GetSelection()]
         self.getFilePath(self.selectedArchiveFilePath)
         self.getArchiveUUID()
+        self.getArchSlideAddress()
 
     #获取文件UUID
     def getArchiveUUID(self):
-        comString = 'dwarfdump --uuid ' + self.dsymFilePath
+        comString = 'dwarfdump --uuid ' + '"' +self.dsymFilePath + '"'
         lines = os.popen(comString).readlines()
         self.archiveUUIDDic = {}
         for line in lines:
@@ -134,16 +143,42 @@ class AHFrame(wx.Frame):
         self.UUIDStringText.SetValue(self.archiveUUIDDic[self.archiveType.GetStringSelection()])
         self.selectedArchiveType = self.archiveType.GetStringSelection()
 
+    # 自动获取对应 arch 的 main Excutable Bundle's slide Address
+    def getArchSlideAddress(self):
+        comString = 'otool -arch ' +  self.selectedArchiveType + ' -l "' + self.getExecutableBundlePath() + '" | grep -B 3 -A 8 -m 2 "__TEXT" | grep vmaddr'
+        lines = os.popen(comString).readlines()
+        if len(lines) == 1:
+            line = lines[0]
+            line = line.strip()
+            slide_address = line.split(' ')[1]
+            self.slideAddressText.SetValue(slide_address)
+            self.archSlideAddress = slide_address
+        else:
+            # nothing
+            self.slideAddressText.SetValue('')
+            self.archSlideAddress = ''
+
+    def getExecutableBundlePath(self):
+       comString = 'cat "' + self.selectedArchiveFilePath + '/Info.plist" | grep \<string\>Applications\/'
+       lines = os.popen(comString).readlines()
+       if len(lines) == 1:
+            line = lines[0]
+            appName = line.replace('<string>Applications/', '').replace('.app</string>', '')
+            appName = appName.strip()
+            return self.selectedArchiveFilePath + '/Products/Applications/' + appName + '.app/' + appName
+       else:
+            return ''
 
     #选择编译器事件
     def EvtRadioBox(self, event):
         self.selectedArchiveType = event.GetString()
         self.UUIDStringText.SetValue(self.archiveUUIDDic[self.selectedArchiveType])
-
+        self.getArchSlideAddress()
+        # self.slideAddressText.SetValue(self.archSlideAddress)
 
     def startCalc(self, event):
         if self.memAddress.GetValue():
-            comString = 'xcrun atos -arch ' + self.selectedArchiveType + ' -o ' + str(self.appFilePath) + ' ' + self.memAddress.GetValue()
+            comString = 'xcrun atos -arch ' + self.selectedArchiveType + ' -o "' + str(self.appFilePath) + '" -l ' + self.slideAddressText.GetValue() + ' ' + self.memAddress.GetValue()
             tmp = os.popen(comString).readlines()
             self.maybeReasonContent.SetValue(tmp[0])
 
@@ -167,7 +202,14 @@ class AHFrame(wx.Frame):
             cu = cx.cursor()
             ##查询
             cu.execute("select * from archives")
-            self.filesList = [dsym[0] for dsym in cu.fetchall()]
+            for dsym in cu.fetchall():
+                if not os.path.exists(dsym[0]):
+                    execSql = "delete from archives where file_path ='%s'" % dsym[0]
+                    cu.execute(execSql)
+                    cx.commit()
+                else:
+                    self.filesList.append(dsym[0])#[dsym[0] for dsym in cu.fetchall() if os.path.exists(dsym[0])]
+            print self.filesList
             self.ShowFileType()
 
     #获取最后需要的文件地址
@@ -187,7 +229,7 @@ class AHFrame(wx.Frame):
         if os.path.isdir(appPath):
             if len(os.listdir(appPath)) is not 0:
                 #命令行中需要的文件路径
-                self.appFilePath = os.path.join(appPath,fileName.split(".")[0])
+                self.appFilePath = os.path.join(appPath,os.listdir(appPath)[0])
 
     #显示关于我的界面
     def OnAboutMe(self, event):
@@ -195,7 +237,7 @@ class AHFrame(wx.Frame):
         aboutMe.ShowModal()
         aboutMe.Destroy()
 
-versions = '1.0.1'
+versions = '1.0.3'
 if __name__ == '__main__':
     app = wx.App(redirect=False)
     frame = AHFrame(None, 'dSYM文件分析工具' + versions)

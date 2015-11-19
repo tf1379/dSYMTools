@@ -281,6 +281,9 @@
 /* Define this if you have flockfile(), getc_unlocked(), and funlockfile() */
 #define HAVE_GETC_UNLOCKED 1
 
+/* Define to 1 if you have the `getentropy' function. */
+/* #undef HAVE_GETENTROPY */
+
 /* Define to 1 if you have the `getgroups' function. */
 #define HAVE_GETGROUPS 1
 
@@ -402,7 +405,11 @@
    and long long is available and at least as big as an off_t. You may need to
    add some flags for configuration and compilation to enable this mode. (For
    Solaris and Linux, the necessary defines are already defined.) */
+#ifdef __LP64__
 /* #undef HAVE_LARGEFILE_SUPPORT */
+#else
+#define HAVE_LARGEFILE_SUPPORT 1
+#endif
 
 /* Define to 1 if you have the 'lchflags' function. */
 #define HAVE_LCHFLAGS 1
@@ -435,7 +442,7 @@
 /* #undef HAVE_LIBRESOLV */
 
 /* Define to 1 if you have the <libutil.h> header file. */
-/* #undef HAVE_LIBUTIL_H */
+#define HAVE_LIBUTIL_H 1
 
 /* Define if you have the 'link' function. */
 #define HAVE_LINK 1
@@ -476,6 +483,9 @@
 /* Define to 1 if you have the `mktime' function. */
 #define HAVE_MKTIME 1
 
+/* Define to 1 if you have the `mmap' function. */
+#define HAVE_MMAP 1
+
 /* Define to 1 if you have the `mremap' function. */
 /* #undef HAVE_MREMAP */
 
@@ -507,10 +517,10 @@
 /* #undef HAVE_PLOCK */
 
 /* Define to 1 if you have the `poll' function. */
-#define HAVE_POLL 1
+/* #undef HAVE_POLL */
 
 /* Define to 1 if you have the <poll.h> header file. */
-#define HAVE_POLL_H 1
+/* #undef HAVE_POLL_H */
 
 /* Define to 1 if you have the <process.h> header file. */
 /* #undef HAVE_PROCESS_H */
@@ -542,6 +552,9 @@
 /* Define to 1 if you have the `putenv' function. */
 #define HAVE_PUTENV 1
 
+/* Define if the libcrypto has RAND_egd */
+#define HAVE_RAND_EGD 1
+
 /* Define to 1 if you have the `readlink' function. */
 #define HAVE_READLINK 1
 
@@ -558,7 +571,7 @@
 #define HAVE_RL_COMPLETION_APPEND_CHARACTER 1
 
 /* Define if you have readline 4.0 */
-#define HAVE_RL_COMPLETION_DISPLAY_MATCHES_HOOK 1
+/* #undef HAVE_RL_COMPLETION_DISPLAY_MATCHES_HOOK */
 
 /* Define if you have readline 4.2 */
 #define HAVE_RL_COMPLETION_MATCHES 1
@@ -1007,7 +1020,11 @@
 #define SIZEOF_INT 4
 
 /* The size of `long', as computed by sizeof. */
+#ifdef __LP64__
 #define SIZEOF_LONG 8
+#else
+#define SIZEOF_LONG 4
+#endif
 
 /* The size of `long double', as computed by sizeof. */
 #define SIZEOF_LONG_DOUBLE 16
@@ -1022,22 +1039,42 @@
 #define SIZEOF_PID_T 4
 
 /* The size of `pthread_t', as computed by sizeof. */
+#ifdef __LP64__
 #define SIZEOF_PTHREAD_T 8
+#else
+#define SIZEOF_PTHREAD_T 4
+#endif
 
 /* The size of `short', as computed by sizeof. */
 #define SIZEOF_SHORT 2
 
 /* The size of `size_t', as computed by sizeof. */
+#ifdef __LP64__
 #define SIZEOF_SIZE_T 8
+#else
+#define SIZEOF_SIZE_T 4
+#endif
 
 /* The size of `time_t', as computed by sizeof. */
+#ifdef __LP64__
 #define SIZEOF_TIME_T 8
+#else
+#define SIZEOF_TIME_T 4
+#endif
 
 /* The size of `uintptr_t', as computed by sizeof. */
+#ifdef __LP64__
 #define SIZEOF_UINTPTR_T 8
+#else
+#define SIZEOF_UINTPTR_T 4
+#endif
 
 /* The size of `void *', as computed by sizeof. */
+#ifdef __LP64__
 #define SIZEOF_VOID_P 8
+#else
+#define SIZEOF_VOID_P 4
+#endif
 
 /* The size of `wchar_t', as computed by sizeof. */
 #define SIZEOF_WCHAR_T 4
@@ -1087,7 +1124,7 @@
 #define USE_TOOLBOX_OBJECT_GLUE 1
 
 /* Define if a va_list is an array of some kind */
-#define VA_LIST_IS_ARRAY 1
+/* #undef VA_LIST_IS_ARRAY */
 
 /* Define if you want SIGFPE handled (see Include/pyfpe.h). */
 /* #undef WANT_SIGFPE_HANDLER */
